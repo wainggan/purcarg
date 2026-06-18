@@ -1,0 +1,14 @@
+[package]
+name = "purcarg"
+description = "simple command line parser"
+version = "0.1.0"
+edition = "2024"
+keywords = ["no-std", "cli", "parser"]
+categories = ["command-line-interface", "no-std", "no-std::no-alloc"]
+license = "Apache-2.0"
+readme = "readme.md"
+repository = "https://github.com/wainggan/purcarg"
+
+[features]
+default = ["std"]
+std = []
