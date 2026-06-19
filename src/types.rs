@@ -1,9 +1,9 @@
 /// defines the cli's shape.
 ///
-/// this api is based around [`crate::Action`], namely [`crate::Action::Layer`].
-/// as described in [`crate::parse()`], for each option the cli user specifies,
-/// `T` is passed into each option's respective 'layer', manipulated, then returned
-/// to the next matched layer.
+/// this api is based around [`crate::Action`], namely
+/// [`crate::Action::Layer`]. as described in [`crate::parse()`], for each
+/// option the cli user specifies, `T` is passed into each option's respective
+/// 'layer', manipulated, then returned to the next matched layer.
 ///
 /// the main vector for this is found in [`crate::Argument`], via
 /// [`field@Self::action`]. consider the following example:
@@ -19,9 +19,9 @@
 ///     ]);
 /// ```
 ///
-/// this specifies a cli with one named option, `--list` (with a short form `-l`).
-/// if a user passes in `"--list"` into the parser, that option's `Action` will
-/// match, running the function.
+/// this specifies a cli with one named option, `--list` (with a short form
+/// `-l`). if a user passes in `"--list"` into the parser, that option's
+/// `Action` will match, running the function.
 ///
 ///
 #[derive(Debug, PartialEq)]
@@ -357,8 +357,9 @@ impl<T, E> Argument<T, E> {
 
 	/// sets [`field@Self::form`] to [`crate::ArgumentForm::Named`].
 	///
-	/// `long` correspond to `--name` style options, and `short` correspond to `-n` style options.
-	/// setting both to empty arrays is possible, but will leave the argument unmatchable.
+	/// `long` correspond to `--name` style options, and `short` correspond to
+	/// `-n` style options setting both to empty arrays is possible, but will
+	/// leave the argument unmatchable.
 	///
 	/// ```
 	/// const argument: purcarg::Argument<(), ()> = purcarg::Argument::new()
@@ -808,7 +809,8 @@ impl core::fmt::Write for OutputWriter<'_> {
 	}
 }
 
-/// configure the parser's metadata, parsing rules, help and version formatting, etc.
+/// configure the parser's metadata, parsing rules, help and version
+/// formatting, etc.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
 	/// version of the cli the generated version page will report.
@@ -817,7 +819,8 @@ pub struct Config {
 	/// specifies how many characters wide a block of text can be
 	/// until it wraps. `None` to disable wrapping.
 	pub wrap: Option<u32>,
-	/// what character to use when name splitting (eg. `--name=value` or `--name:value`).
+	/// what character to use when name splitting (eg. `--name=value` or
+	/// `--name:value`).
 	/// `None` to disable.
 	pub name_splitting: Option<&'static str>,
 }
@@ -1020,7 +1023,8 @@ impl Config {
 	}
 }
 
-/// used with [`crate::Config`] to configure how the cli's version should be rendered.
+/// used with [`crate::Config`] to configure how the cli's version should be
+/// rendered.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ConfigVersion {
 	/// formatted as `"x"`.
@@ -1045,16 +1049,16 @@ pub enum Error<'a, E> {
 	/// emitted when an unexpected positional value is found.
 	/// the included `&str` may be truncated.
 	BadPositional(&'a str),
-	/// emitted when, after parsing all the arguments command, any option marked as
-	/// required wasn't specified.
+	/// emitted when, after parsing all the arguments command, any option marked
+	/// as required wasn't specified.
 	///
 	/// when such an option is found, this variant is emitted if a long
 	/// option (`--name`) exists for the command. if only a short option (`-n`)
 	/// exists for the command, [`crate::Error::RequiredShort`] is
 	/// emitted instead.
 	RequiredLong(&'static str),
-	/// emitted when, after parsing all the arguments command, any option marked as
-	/// required wasn't specified.
+	/// emitted when, after parsing all the arguments command, any option marked
+	/// as required wasn't specified.
 	///
 	/// specifically, this is only emitted if the related command didn't
 	/// have a long argument (`--name`) defined, but only a short one (`-n`).

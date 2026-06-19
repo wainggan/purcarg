@@ -16,30 +16,37 @@ use crate::types::*;
 /// ```
 ///
 /// `argument` is an iterator of `&str`, each representing a single option or
-/// input with no trailing whitespace (`-abc --xyz 123` -> `"-abc" "--xyz" "123"`).
+/// input with no trailing whitespace
+/// (`-abc --xyz 123` -> `"-abc" "--xyz" "123"`).
 ///
-/// it being a simple, strictly ordered iterator, plus this parse having no allocation,
-/// places certain restrictions in how arguments can be parsed, and may lead
-/// to surprising behaviour. the rules used will be described here.
+/// it being a simple, strictly ordered iterator, plus this parse having
+/// no allocation, places certain restrictions in how arguments can be parsed,
+/// and may lead to surprising behaviour. the rules used will be described
+/// here.
 ///
-/// - the parser first starts in "named option mode". for each argument, it checks if it
-///   begins with either long style `"--"` or short style `"-"`.
-///     - in the case of long style, the `"--"` is first trimmed off to get the name. if
-///       [`field@crate::Config::name_splitting`] is enabled, then the name is first split into
-///       a name and value. then name is then matched against `command`'s arguments that
-///       are [`crate::ArgumentForm::Named`] to run its respective `Action`.
-///     - in the case of short style, the `"-"` is first trimmed off. then, each character
-///       is matched against `command`'s arguments that are [`crate::ArgumentForm::Named`] to
-///       run each respective `Action` (eg: `-abc`). notably, if any of these `Action`s are
-///       [`crate::Action::Layer`], and the layer's passed in `next()` function is called, only
-///       the last character (so, the `c` in `-abc`) will recieve `Some`.
-/// - as soon as an argument that doesn't start with either `"--"` or `"-"` is found,
-///   the parser enters "positional option mode". it will attempt to greedily give every one
-///   of `command`'s arguments that are [`crate::ArgumentForm::Positional`] at most one argument.
-/// - when there are no more positional arguments, the parser will check for another argument,
-///   and check if it matches any [`crate::Command`] in `command`'s subcommands. if so, this
-///   entire process repeats, using the rest of the available arguments in the iterator, and the
-///   matched subcommand.
+/// - the parser first starts in "named option mode". for each argument, it
+///   checks if it begins with either long style `"--"` or short style `"-"`.
+///     - in the case of long style, the `"--"` is first trimmed off to get the
+///       name. if [`field@crate::Config::name_splitting`] is enabled, then the
+///       name is first split into a name and value. then name is then matched
+///       against `command`'s arguments that are [`crate::ArgumentForm::Named`]
+///       to run its respective `Action`.
+///     - in the case of short style, the `"-"` is first trimmed off. then,
+///       each character is matched against `command`'s arguments that are
+///       [`crate::ArgumentForm::Named`] to run each respective `Action`
+///       (eg: `-abc`). notably, if any of these `Action`s are
+///       [`crate::Action::Layer`], and the layer's passed in `next()` function
+///       is called, only the last character (so, the `c` in `-abc`) will
+///       recieve `Some`.
+/// - as soon as an argument that doesn't start with either `"--"` or `"-"` is
+///   found, the parser enters "positional option mode". it will attempt to
+///   greedily give every one of `command`'s arguments that are
+///   [`crate::ArgumentForm::Positional`] at most one argument.
+/// - when there are no more positional arguments, the parser will check for
+///   another argument, and check if it matches any [`crate::Command`] in
+///   `command`'s subcommands. if so, this entire process repeats, using the
+///   rest of the available arguments in the iterator, and the matched
+///   subcommand.
 ///
 /// `argument` may require some manipulation to satisfy type checking.
 /// given `&[&str]`, for example:
@@ -71,8 +78,9 @@ use crate::types::*;
 /// purcarg::parse(output, config, command, arguments, ());
 /// ```
 ///
-/// since this currently only accepts `&str`, inputs like `Iterator<Item = &OsStr>`
-/// require filtering or otherwise dealing with invalid `str` values.
+/// since this currently only accepts `&str`, inputs like
+/// `Iterator<Item = &OsStr>` require filtering or otherwise dealing with
+/// invalid `str` values.
 ///
 /// ```
 /// # const output: purcarg::Output = purcarg::Output::new();
@@ -172,8 +180,8 @@ fn parse_core<'a, T, E>(
 	let mut required_flag = 0 as Mask;
 
 	while let Some(check) = args.peek() {
-		if let Some(long) = check.strip_prefix(b"--")
-			&& let Some(long) = str::from_utf8(long).ok()
+		if let Some(long) = check.strip_prefix(b"--") &&
+			let Some(long) = str::from_utf8(long).ok()
 		{
 			args.next();
 
