@@ -16,8 +16,8 @@ use crate::types::*;
 /// ```
 ///
 /// `argument` is an iterator of `&str`, each representing a single option or
-/// input with no trailing whitespace
-/// (`-abc --xyz 123` -> `"-abc" "--xyz" "123"`).
+/// input with no trailing whitespace (`-abc --xyz 123` ->
+/// `"-abc" "--xyz" "123"`).
 ///
 /// it being a simple, strictly ordered iterator, plus this parse having
 /// no allocation, places certain restrictions in how arguments can be parsed,
