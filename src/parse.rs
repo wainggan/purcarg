@@ -362,7 +362,6 @@ fn parse_core<'a, T, E>(
 				.iter()
 				.find(|x| x.name.contains(&check))
 		{
-			args.next();
 			return parse_core(output, config, next_command, args, layer);
 		}
 
