@@ -1,3 +1,4 @@
+#[allow(clippy::wildcard_imports, reason = "this is self contained")]
 use crate::types::*;
 
 /// parse command line options.
@@ -12,7 +13,7 @@ use crate::types::*;
 /// // configures routing (what options or subcommands to expect) and other metadata.
 /// const command: purcarg::Command<(), ()> = purcarg::Command::new();
 ///
-/// purcarg::parse(output, config, command, [], ());
+/// purcarg::parse_str(output, config, command, [], ());
 /// ```
 ///
 /// `argument` is an iterator of `&str`, each representing a single option or
@@ -57,7 +58,7 @@ use crate::types::*;
 /// # const command: purcarg::Command<(), ()> = purcarg::Command::new();
 /// let arguments_slice: &[&str] = &["--help"];
 /// let arguments = arguments_slice.iter().copied();
-/// purcarg::parse(output, config, command, arguments, ());
+/// purcarg::parse_str(output, config, command, arguments, ());
 /// ```
 ///
 /// `Iterator<Item = String>` may require either collecting or leaking.
@@ -68,14 +69,14 @@ use crate::types::*;
 /// # const command: purcarg::Command<(), ()> = purcarg::Command::new();
 /// let raw_arguments = ["--help".to_string()].into_iter();
 /// let arguments = raw_arguments.map(|x| &*x.leak());
-/// purcarg::parse(output, config, command, arguments, ());
+/// purcarg::parse_str(output, config, command, arguments, ());
 ///
 /// // or
 ///
 /// let raw_arguments = ["--help".to_string()].into_iter();
 /// let arguments_list = raw_arguments.collect::<Vec<_>>();
 /// let arguments = arguments_list.iter().map(|x| x.as_str());
-/// purcarg::parse(output, config, command, arguments, ());
+/// purcarg::parse_str(output, config, command, arguments, ());
 /// ```
 ///
 /// since this currently only accepts `&str`, inputs like
@@ -89,24 +90,25 @@ use crate::types::*;
 /// # use std::ffi::OsStr;
 /// let arguments_slice: &[&OsStr] = &[OsStr::new("--help")];
 /// let arguments = arguments_slice.iter().filter_map(|x| x.to_str());
-/// purcarg::parse(output, config, command, arguments, ());
+/// purcarg::parse_str(output, config, command, arguments, ());
 /// ```
 ///
 /// alternatively, use [`crate::parse_bytes()`].
-pub fn parse<'a, 'b, T, E>(
+#[expect(clippy::missing_errors_doc, reason = "the error case is self explanatory")]
+pub fn parse_str<'a, 'b, T, E>(
 	output: Output<'a>,
 	config: Config,
 	command: Command<T, E>,
 	argument: impl IntoIterator<Item = &'b str>,
 	layer: T,
-) -> Result<T, Error<'b, E>> {
-	let iter = argument.into_iter().map(|x| x.as_bytes());
+) -> Result<Success<T>, Error<'b, E>> {
+	let iter = argument.into_iter().map(str::as_bytes);
 	parse_bytes(output, config, command, iter, layer)
 }
 
 /// parse command line options.
 ///
-/// this is exactly like [`crate::parse()`], except this accepts an
+/// this is exactly like [`crate::parse_str()`], except this accepts an
 /// iterator of `&[u8]` instead of `&str`.
 ///
 /// ```
@@ -118,46 +120,50 @@ pub fn parse<'a, 'b, T, E>(
 /// let arguments = arguments_slice.iter().map(|x| x.as_encoded_bytes());
 /// purcarg::parse_bytes(output, config, command, arguments, ());
 /// ```
+#[expect(clippy::missing_errors_doc, reason = "the error case is self explanatory")]
+#[expect(clippy::needless_pass_by_value, reason = "idc")]
 pub fn parse_bytes<'a, 'b, T, E>(
 	mut output: Output<'a>,
 	config: Config,
 	command: Command<T, E>,
 	argument: impl IntoIterator<Item = &'b [u8]>,
 	layer: T,
-) -> Result<T, Error<'b, E>> {
+) -> Result<Success<T>, Error<'b, E>> {
 	let mut iter = argument.into_iter().peekable();
 	parse_core(&mut output, &config, &command, &mut iter, layer)
 }
 
 #[inline]
+#[expect(clippy::too_many_lines, reason = "does not need to be shorter")]
 fn parse_core<'a, T, E>(
 	output: &mut Output<'_>,
 	config: &Config,
 	command: &Command<T, E>,
 	args: &mut core::iter::Peekable<impl Iterator<Item = &'a [u8]>>,
 	mut layer: T,
-) -> Result<T, Error<'a, E>> {
+) -> Result<Success<T>, Error<'a, E>> {
 	// meow meow meow
 
 	type Mask = u128;
 
 	match command.action {
 		Action::None => (),
-		Action::LayerBytes(cb) =>
+		Action::LayerBytes(cb) => {
 			layer = cb(layer, &mut || args.next())
-				.map_err(|e| Error::Other(e))?,
+				.map_err(|e| Error::Other(e))?;
+		}
 		Action::Layer(cb) => {
 			let mut mapped = args.filter_map(|x| str::from_utf8(x).ok());
 			layer = cb(layer, &mut || mapped.next())
-				.map_err(|e| Error::Other(e))?
+				.map_err(|e| Error::Other(e))?;
 		}
 		Action::Help => {
 			parse_core_help(command, output, config).map_err(|x| Error::FmtError(x))?;
-			return Ok(layer);
+			return Ok(Success::Help);
 		}
 		Action::Version => {
 			parse_core_version(command, output, config).map_err(|x| Error::FmtError(x))?;
-			return Ok(layer);
+			return Ok(Success::Version);
 		}
 	}
 
@@ -213,16 +219,21 @@ fn parse_core<'a, T, E>(
 
 			match arg.action {
 				Action::None => (),
-				Action::LayerBytes(cb) =>
+				Action::LayerBytes(cb) => {
 					layer = cb(layer, &mut || passed_args.next())
-						.map_err(|e| Error::Other(e))?,
+						.map_err(|e| Error::Other(e))?;
+				}
 				Action::Layer(cb) => {
 					let mut mapped = passed_args.filter_map(|x| str::from_utf8(x).ok());
 					layer = cb(layer, &mut || mapped.next())
-						.map_err(|e| Error::Other(e))?
+						.map_err(|e| Error::Other(e))?;
 				}
-				Action::Help => return parse_core_help(command, output, config).map(|()| layer).map_err(|x| Error::FmtError(x)),
-				Action::Version => return parse_core_version(command, output, config).map(|()| layer).map_err(|x| Error::FmtError(x)),
+				Action::Help => return parse_core_help(command, output, config)
+					.map(|()| Success::Help)
+					.map_err(|x| Error::FmtError(x)),
+				Action::Version => return parse_core_version(command, output, config)
+					.map(|()| Success::Version)
+					.map_err(|x| Error::FmtError(x)),
 			}
 
 			required_flag |= Mask::from(arg.required) << i;
@@ -266,8 +277,12 @@ fn parse_core<'a, T, E>(
 							}
 						}).map_err(|e| Error::Other(e))?;
 					}
-					Action::Help => return parse_core_help(command, output, config).map(|()| layer).map_err(|x| Error::FmtError(x)),
-					Action::Version => return parse_core_version(command, output, config).map(|()| layer).map_err(|x| Error::FmtError(x)),
+					Action::Help => return parse_core_help(command, output, config)
+						.map(|()| Success::Help)
+						.map_err(|x| Error::FmtError(x)),
+					Action::Version => return parse_core_version(command, output, config)
+						.map(|()| Success::Version)
+						.map_err(|x| Error::FmtError(x)),
 				}
 
 				required_flag |= Mask::from(arg.required) << i;
@@ -316,10 +331,8 @@ fn parse_core<'a, T, E>(
 					ArgumentForm::Positional(x) => x,
 				}));
 			}
-			else {
-				// don't give optionals an empty value lol
-				continue;
-			}
+			// don't give optionals an empty value lol
+			continue;
 		}
 
 		let mut resetable_value = value.into_iter();
@@ -332,8 +345,12 @@ fn parse_core<'a, T, E>(
 				let mut resetable_value =  resetable_value.filter_map(|x| str::from_utf8(x).ok());
 				layer = cb(layer, &mut || resetable_value.next()).map_err(|e| Error::Other(e))?;
 			}
-			Action::Help => return parse_core_help(command, output, config).map(|()| layer).map_err(|x| Error::FmtError(x)),
-			Action::Version => return parse_core_version(command, output, config).map(|()| layer).map_err(|x| Error::FmtError(x)),
+			Action::Help => return parse_core_help(command, output, config)
+				.map(|()| Success::Help)
+				.map_err(|x| Error::FmtError(x)),
+			Action::Version => return parse_core_version(command, output, config)
+				.map(|()| Success::Version)
+				.map_err(|x| Error::FmtError(x)),
 		}
 	}
 
@@ -348,26 +365,25 @@ fn parse_core<'a, T, E>(
 			args.next();
 			return parse_core(output, config, next_command, args, layer);
 		}
-		else {
-			// anything left over is an error
 
-			// grab excerpt of what could potentially be a long input
-			let positional = str::from_utf8(check).ok().map(|x| {
-				let mut char_indices = x
-					.char_indices()
-					.map(|(i, _)| i)
-					.chain(core::iter::once(x.len()));
-				let end_byte = char_indices
-					.nth(31usize)
-					.unwrap_or(x.len());
-				&x[0..end_byte]
-			}).unwrap_or("<unknown>");
+		// anything left over is an error
 
-			return Err(Error::BadPositional(positional));
-		}
+		// grab excerpt of what could potentially be a long input
+		let positional = str::from_utf8(check).ok().map_or("<unknown>", |x| {
+			let mut char_indices = x
+				.char_indices()
+				.map(|(i, _)| i)
+				.chain(core::iter::once(x.len()));
+			let end_byte = char_indices
+				.nth(31usize)
+				.unwrap_or(x.len());
+			&x[0..end_byte]
+		});
+
+		return Err(Error::BadPositional(positional));
 	}
 
-	Ok(layer)
+	Ok(Success::Layer(layer))
 }
 
 fn parse_core_version<T, E>(
@@ -398,6 +414,7 @@ fn parse_core_version<T, E>(
 	Ok(())
 }
 
+#[expect(clippy::too_many_lines, reason = "does not need to be shorter")]
 fn parse_core_help<T, E>(
 	command: &Command<T, E>,
 	output: &mut Output<'_>,
@@ -446,10 +463,8 @@ fn parse_core_help<T, E>(
 			write!(writer, ")")?;
 		}
 	}
-	else {
-		if has_subcommand {
-			write!(writer, " <subcommand>")?;
-		}
+	else if has_subcommand {
+		write!(writer, " <subcommand>")?;
 	}
 
 	writeln!(writer)?;
@@ -588,7 +603,8 @@ fn write_wrapped(
 
 		write!(writer, "{}", word)?;
 
-		if iter.peek().is_some() {
+		if let Some(check) = iter.peek() &&
+			col + len + check.len() <= width as usize {
 			write!(writer, " ")?;
 		}
 

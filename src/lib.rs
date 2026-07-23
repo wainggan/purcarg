@@ -8,7 +8,7 @@
 //! - [`crate::Config`] configures options related to global parsing logic and output.
 //! - [`crate::Output`] allows you to set where the output of the cli goes (for
 //! example, into a `String`, or stdio).
-//! - [`crate::parse()`], finally, is what parses and handles arguments.
+//! - [`crate::parse_str()`], finally, is what parses and handles arguments.
 //!
 //! ```
 //! #[derive(Debug)]
@@ -45,7 +45,9 @@
 //!
 //! let arguments = ["10"];
 //!
-//! let input = purcarg::parse(output, config, command, arguments, Input(None)).unwrap();
+//! let input = purcarg::parse_str(output, config, command, arguments, Input(None))
+//!     .unwrap()
+//!     .unwrap_layer();
 //!
 //! assert_eq!(input.0, Some(10));
 //! ```
@@ -53,7 +55,10 @@
 #![no_std]
 
 #![warn(missing_docs)]
+#![warn(clippy::pedantic)]
 #![warn(clippy::cargo)]
+
+#![allow(clippy::uninlined_format_args)]
 
 #[cfg(feature = "std")]
 extern crate std;

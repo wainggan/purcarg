@@ -540,12 +540,14 @@ pub enum ArgumentForm {
 }
 
 impl ArgumentForm {
-	#[inline]
+	#[expect(clippy::inline_always, reason = "tiny ass function")]
+	#[inline(always)]
 	pub(crate) fn is_positional(&self) -> bool {
 		!self.is_named()
 	}
 
-	#[inline]
+	#[expect(clippy::inline_always, reason = "tiny ass function")]
+	#[inline(always)]
 	pub(crate) fn is_named(&self) -> bool {
 		matches!(self, Self::Named { .. })
 	}
@@ -930,7 +932,6 @@ impl Config {
 		self.version_raw(ConfigVersion::Quadruple(x, y, z, w))
 	}
 
-
 	/// sets [`field@Self::version`].
 	///
 	/// equivalent to
@@ -1039,7 +1040,72 @@ pub enum ConfigVersion {
 	String(&'static str),
 }
 
-/// an error type returned by the [`crate::parse()`] functions.
+/// a success type returned by the [`crate::parse_str()`] functions.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Success<T> {
+	/// emitted when successful.
+	Layer(T),
+	/// emitted when an [`crate::Action::Help`] argument is found.
+	Help,
+	/// emitted when an [`crate::Action::Version`] argument is found.
+	Version,
+}
+
+impl<T> Success<T> {
+	/// unwraps the held value if self is [`crate::Success::Layer`].
+	///
+	/// ```
+	/// let success = purcarg::Success::Layer(());
+	/// assert_eq!(success.unwrap_layer(), ());
+	/// ```
+	///
+	/// ```should_panic
+	/// let success_question_mark = purcarg::Success::<()>::Help;
+	/// success_question_mark.unwrap_layer(); // panics
+	/// ```
+	///
+	/// ## Panics
+	///
+	/// if self is not [`crate::Success::Layer`].
+	pub fn unwrap_layer(self) -> T {
+		match self {
+			Success::Layer(x) => x,
+			_ => panic!("unwrapped non-layer value"),
+		}
+	}
+
+	/// checks if this is a [`crate::Success::Layer`].
+	///
+	/// ```
+	/// let success = purcarg::Success::Layer(());
+	/// assert!(success.is_layer());
+	/// ```
+	pub fn is_layer(&self) -> bool {
+		matches!(self, Success::Layer(_))
+	}
+
+	/// checks if this is a [`crate::Success::Help`].
+	///
+	/// ```
+	/// let success = purcarg::Success::<()>::Help;
+	/// assert!(success.is_help());
+	/// ```
+	pub fn is_help(&self) -> bool {
+		matches!(self, Success::Help)
+	}
+
+	/// checks if this is a [`crate::Success::Version`].
+	///
+	/// ```
+	/// let success = purcarg::Success::<()>::Version;
+	/// assert!(success.is_version());
+	/// ```
+	pub fn is_version(&self) -> bool {
+		matches!(self, Success::Version)
+	}
+}
+
+/// an error type returned by the [`crate::parse_str()`] functions.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Error<'a, E> {
 	/// emitted when an unknown or malformed long option (`--name`) is found.
