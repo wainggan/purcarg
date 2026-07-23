@@ -799,7 +799,7 @@ impl core::fmt::Write for OutputWriter<'_> {
 					.map_err(|_| core::fmt::Error),
 			#[cfg(feature = "std")]
 			OutputWriter::Stdio => {
-				std::println!("{}", s);
+				std::print!("{}", s);
 				Ok(())
 			}
 			#[cfg(feature = "std")]
